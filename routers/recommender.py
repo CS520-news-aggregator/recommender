@@ -2,6 +2,7 @@ from fastapi import APIRouter, Body, Request
 from models.data import Post, Annotation
 import os
 import requests
+from collections import Counter
 
 recommender_router = APIRouter(prefix="/recommender")
 POSTS_PULL_LIMIT = 10
@@ -14,30 +15,40 @@ async def get_recommendations(_: Request, user_id: str, limit: int):
     posts_to_annotation = get_posts_info()
     list_recommendations: list[Post] = list()
 
-    # Dummy recommendation logic
-    for i in range(min(limit, len(posts_to_annotation))):
-        post, annotation = posts_to_annotation[i]
-        list_recommendations.append(post)
+    if user := get_user_info(user_id) == None:
+        return {
+            "message": "Could not retrieve user data",
+            "list_recommendations": [],
+        }
 
+    user_prefs = Counter(user["preferences"])
+
+    post_matches = Counter()
+    for i in range(len(posts_to_annotation)):
+        post, annotation = posts_to_annotation[i]
+        annotation_counts = Counter(annotation)
+        post_matches[post] = sum((user_prefs & annotation_counts).values())
+
+    list_recommendations = post_matches.most_common(limit)
     return {
         "message": "Recommendation sent",
         "list_recommendations": [post._id for post in list_recommendations],
     }
 
 
+def get_user_info(user_id: str) -> dict | None:
+    return get_db_data("user/get-user", {"user_id": user_id})
+
+
 def get_posts_info() -> list[tuple[Post, Annotation]]:
     posts_to_annotation = list()
 
-    if list_posts_json := get_db_data(
-        "aggregator/get-all-aggregations", {"limit": POSTS_PULL_LIMIT}
-    ):
+    if list_posts_json := get_db_data("aggregator/get-all-aggregations", {"limit": POSTS_PULL_LIMIT}):
         for post_json in list_posts_json["list_posts"]:
             post = Post(**post_json)
             post._id = post_json["_id"]
 
-            annotation_json = get_db_data(
-                "annotator/get-annotation", {"post_id": post._id}
-            )
+            annotation_json = get_db_data("annotator/get-annotation", {"post_id": post._id})
 
             if annotation_json and annotation_json["annotations"]:
                 annotations = Annotation(**annotation_json["annotations"])
