@@ -12,5 +12,9 @@ class Source(BaseModel):
 
 
 class Post(BaseModel):
+    id: str
     source_ids: List[str]
     topics: List[str]
+
+    upvotes: int
+    downvotes: int

@@ -47,8 +47,8 @@ def get_posts() -> list[Post]:
     if list_posts_json := get_db_data(
         "annotator/get-all-posts", {"limit": POSTS_PULL_LIMIT}
     ):
-        for annotation_json in list_posts_json["list_posts"]:
-            post = Post(**annotation_json)
+        for post_json in list_posts_json["list_posts"]:
+            post = Post(**post_json)
             list_posts.append(post)
 
     return list_posts
