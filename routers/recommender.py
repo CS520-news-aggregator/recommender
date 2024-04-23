@@ -31,6 +31,12 @@ async def get_recommendations(_: Request, user_id: str, limit: int):
 
     list_recommendations = [jsonable_encoder(post) for post in list_posts[:limit]]
 
+    # FIXME: for now, put random title and summary and media
+    for post in list_recommendations:
+        post["title"] = "Random title"
+        post["summary"] = "Random summary"
+        post["media"] = "https://t3.ftcdn.net/jpg/05/82/67/96/360_F_582679641_zCnWSvan9oScBHyWzfirpD4MKGp0kylJ.jpg"
+
     return {
         "message": "Recommendation sent",
         "list_recommendations": list_recommendations,
