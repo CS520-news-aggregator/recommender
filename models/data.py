@@ -2,7 +2,7 @@ from typing import List
 from pydantic import BaseModel
 
 
-class Post(BaseModel):
+class Source(BaseModel):
     _id: str
     title: str
     link: str
@@ -11,6 +11,6 @@ class Post(BaseModel):
     date: str
 
 
-class Annotation(BaseModel):
-    post_ids: List[str]
+class Post(BaseModel):
+    source_ids: List[str]
     topics: List[str]

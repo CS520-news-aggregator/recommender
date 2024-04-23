@@ -1,5 +1,6 @@
 from fastapi import APIRouter, Body, Request
-from models.data import Post, Annotation
+from fastapi.encoders import jsonable_encoder
+from models.data import Source, Post
 import os
 import requests
 from collections import Counter
@@ -12,7 +13,6 @@ POSTS_PULL_LIMIT = 10
 async def get_recommendations(_: Request, user_id: str, limit: int):
     print(f"Received request for recommendations for user: {user_id}")
 
-    list_annotations = get_annotations()
     list_posts = get_posts()
 
     if user := get_user_info(user_id) is None:
@@ -24,17 +24,16 @@ async def get_recommendations(_: Request, user_id: str, limit: int):
     # user_prefs = Counter(user["preferences"])
 
     # post_matches = Counter()
-    # for i in range(len(list_annotations)):
-    #     post, annotation = list_annotations[i]
+    # for i in range(len(list_posts)):
+    #     post, annotation = list_posts[i]
     #     annotation_counts = Counter(annotation)
     #     post_matches[post] = sum((user_prefs & annotation_counts).values())
 
-    # list_recommendations = post_matches.most_common(limit)
+    list_recommendations = [jsonable_encoder(post) for post in list_posts[:limit]]
 
     return {
         "message": "Recommendation sent",
-        # "list_recommendations": list_annotations[:limit],
-        "list_recommendations": list_posts[:limit],
+        "list_recommendations": list_recommendations,
     }
 
 
@@ -42,30 +41,22 @@ def get_user_info(user_id: str) -> dict | None:
     return get_db_data("user/get-user", {"user_id": user_id})
 
 
-def get_annotations() -> list[Annotation]:
-    list_annotations = list()
-
-    if list_annotations_json := get_db_data(
-        "annotator/get-all-annotations", {"limit": POSTS_PULL_LIMIT}
-    ):
-        for annotation_json in list_annotations_json["list_annotations"]:
-            annotation = Annotation(**annotation_json)
-            list_annotations.append(annotation)
-
-    return list_annotations
-
-
 def get_posts() -> list[Post]:
     list_posts = list()
 
     if list_posts_json := get_db_data(
-        "aggregator/get-all-aggregations", {"limit": POSTS_PULL_LIMIT}
+        "annotator/get-all-annotations", {"limit": POSTS_PULL_LIMIT}
     ):
-        for post_json in list_posts_json["list_posts"]:
-            post = Post(**post_json)
+        for annotation_json in list_posts_json["list_posts"]:
+            post = Post(**annotation_json)
             list_posts.append(post)
 
     return list_posts
+
+
+def get_source(source_id: str) -> Source | None:
+    source_json = get_db_data("aggregator/get-aggregation", {"source_id": source_id})
+    return Source(**source_json) if source_json else None
 
 
 def get_db_data(endpoint: str, params: dict):
