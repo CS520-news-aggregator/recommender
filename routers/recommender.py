@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Body, Request
 from fastapi.encoders import jsonable_encoder
-from models.data import Source, Post
+from models.source import Source
+from models.post import Post
 import os
 import requests
 from collections import Counter
@@ -35,7 +36,9 @@ async def get_recommendations(_: Request, user_id: str, limit: int):
     for post in list_recommendations:
         post["title"] = "Random title"
         post["summary"] = "Random summary"
-        post["media"] = "https://t3.ftcdn.net/jpg/05/82/67/96/360_F_582679641_zCnWSvan9oScBHyWzfirpD4MKGp0kylJ.jpg"
+        post["media"] = (
+            "https://t3.ftcdn.net/jpg/05/82/67/96/360_F_582679641_zCnWSvan9oScBHyWzfirpD4MKGp0kylJ.jpg"
+        )
 
     return {
         "message": "Recommendation sent",
