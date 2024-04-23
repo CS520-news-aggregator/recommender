@@ -12,27 +12,29 @@ POSTS_PULL_LIMIT = 10
 async def get_recommendations(_: Request, user_id: str, limit: int):
     print(f"Received request for recommendations for user: {user_id}")
 
-    posts_to_annotation = get_posts_info()
-    list_recommendations: list[Post] = list()
+    list_annotations = get_annotations()
+    list_posts = get_posts()
 
-    if user := get_user_info(user_id) == None:
+    if user := get_user_info(user_id) is None:
         return {
             "message": "Could not retrieve user data",
             "list_recommendations": [],
         }
 
-    user_prefs = Counter(user["preferences"])
+    # user_prefs = Counter(user["preferences"])
 
-    post_matches = Counter()
-    for i in range(len(posts_to_annotation)):
-        post, annotation = posts_to_annotation[i]
-        annotation_counts = Counter(annotation)
-        post_matches[post] = sum((user_prefs & annotation_counts).values())
+    # post_matches = Counter()
+    # for i in range(len(list_annotations)):
+    #     post, annotation = list_annotations[i]
+    #     annotation_counts = Counter(annotation)
+    #     post_matches[post] = sum((user_prefs & annotation_counts).values())
 
-    list_recommendations = post_matches.most_common(limit)
+    # list_recommendations = post_matches.most_common(limit)
+
     return {
         "message": "Recommendation sent",
-        "list_recommendations": [post._id for post in list_recommendations],
+        # "list_recommendations": list_annotations[:limit],
+        "list_recommendations": list_posts[:limit],
     }
 
 
@@ -40,21 +42,30 @@ def get_user_info(user_id: str) -> dict | None:
     return get_db_data("user/get-user", {"user_id": user_id})
 
 
-def get_posts_info() -> list[tuple[Post, Annotation]]:
-    posts_to_annotation = list()
+def get_annotations() -> list[Annotation]:
+    list_annotations = list()
 
-    if list_posts_json := get_db_data("aggregator/get-all-aggregations", {"limit": POSTS_PULL_LIMIT}):
+    if list_annotations_json := get_db_data(
+        "annotator/get-all-annotations", {"limit": POSTS_PULL_LIMIT}
+    ):
+        for annotation_json in list_annotations_json["list_annotations"]:
+            annotation = Annotation(**annotation_json)
+            list_annotations.append(annotation)
+
+    return list_annotations
+
+
+def get_posts() -> list[Post]:
+    list_posts = list()
+
+    if list_posts_json := get_db_data(
+        "aggregator/get-all-aggregations", {"limit": POSTS_PULL_LIMIT}
+    ):
         for post_json in list_posts_json["list_posts"]:
             post = Post(**post_json)
-            post._id = post_json["_id"]
+            list_posts.append(post)
 
-            annotation_json = get_db_data("annotator/get-annotation", {"post_id": post._id})
-
-            if annotation_json and annotation_json["annotations"]:
-                annotations = Annotation(**annotation_json["annotations"])
-                posts_to_annotation.append((post, annotations))
-
-    return posts_to_annotation
+    return list_posts
 
 
 def get_db_data(endpoint: str, params: dict):
@@ -66,7 +77,7 @@ def get_db_data(endpoint: str, params: dict):
     try:
         response = requests.get(db_url, params=params, timeout=5)
     except requests.exceptions.RequestException:
-        print(f"Could not send data to database service due to timeout")
+        print(f"Could not get data from database service due to timeout")
         encountered_error = True
     else:
         if response.status_code != 200:

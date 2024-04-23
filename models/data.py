@@ -12,6 +12,5 @@ class Post(BaseModel):
 
 
 class Annotation(BaseModel):
-    _id: str
-    post_id: str
-    list_topics: List[str]
+    post_ids: List[str]
+    topics: List[str]
