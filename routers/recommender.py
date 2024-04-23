@@ -10,7 +10,7 @@ POSTS_PULL_LIMIT = 10
 
 
 @recommender_router.get("/get-recommendations")
-async def get_recommendations(_: Request, user_id: str, limit: int):
+async def get_recommendations(_: Request, user_id: str, limit: int = 5):
     print(f"Received request for recommendations for user: {user_id}")
 
     list_posts = get_posts()
@@ -45,7 +45,7 @@ def get_posts() -> list[Post]:
     list_posts = list()
 
     if list_posts_json := get_db_data(
-        "annotator/get-all-annotations", {"limit": POSTS_PULL_LIMIT}
+        "annotator/get-all-posts", {"limit": POSTS_PULL_LIMIT}
     ):
         for annotation_json in list_posts_json["list_posts"]:
             post = Post(**annotation_json)
