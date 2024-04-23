@@ -30,7 +30,9 @@ async def get_recommendations(_: Request, user_id: str, limit: int):
     #     annotation_counts = Counter(annotation)
     #     post_matches[post] = sum((user_prefs & annotation_counts).values())
 
-    list_recommendations = [jsonable_encoder(post) for post in list_posts[:limit]]
+    list_recommendations = [
+        change_db_id_to_str(jsonable_encoder(post)) for post in list_posts[:limit]
+    ]
 
     # FIXME: for now, put random title and summary and media
     for post in list_recommendations:
@@ -85,3 +87,9 @@ def get_db_data(endpoint: str, params: dict):
             encountered_error = True
 
     return response.json() if not encountered_error else None
+
+
+def change_db_id_to_str(data):
+    if data:
+        data["id"] = str(data["_id"])
+    return data
