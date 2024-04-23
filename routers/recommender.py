@@ -10,7 +10,7 @@ POSTS_PULL_LIMIT = 10
 
 
 @recommender_router.get("/get-recommendations")
-async def get_recommendations(_: Request, user_id: str, limit: int = 5):
+async def get_recommendations(_: Request, user_id: str, limit: int):
     print(f"Received request for recommendations for user: {user_id}")
 
     list_posts = get_posts()
