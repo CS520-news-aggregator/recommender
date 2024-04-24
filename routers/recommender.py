@@ -4,7 +4,6 @@ from models.source import Source
 from models.post import Post
 import os
 import requests
-from collections import Counter
 
 recommender_router = APIRouter(prefix="/recommender")
 POSTS_PULL_LIMIT = 10
@@ -23,6 +22,7 @@ async def get_recommendations(_: Request, user_id: str, limit: int):
         }
 
     # user_prefs = Counter(user["preferences"])
+    # user_votes = Counter(user["votes"])
 
     # post_matches = Counter()
     # for i in range(len(list_posts)):
@@ -34,10 +34,8 @@ async def get_recommendations(_: Request, user_id: str, limit: int):
         change_db_id_to_str(jsonable_encoder(post)) for post in list_posts[:limit]
     ]
 
-    # FIXME: for now, put random title and summary and media
+    # FIXME: for now, put random media
     for post in list_recommendations:
-        post["title"] = "Random title"
-        post["summary"] = "Random summary"
         post["media"] = (
             "https://t3.ftcdn.net/jpg/05/82/67/96/360_F_582679641_zCnWSvan9oScBHyWzfirpD4MKGp0kylJ.jpg"
         )
@@ -77,7 +75,7 @@ def get_db_data(endpoint: str, params: dict):
     encountered_error = False
 
     try:
-        response = requests.get(db_url, params=params, timeout=5)
+        response = requests.get(db_url, params=params, timeout=30)
     except requests.exceptions.RequestException:
         print(f"Could not get data from database service due to timeout")
         encountered_error = True
