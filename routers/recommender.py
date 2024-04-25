@@ -34,6 +34,10 @@ async def get_recommendations(_: Request, user_id: str, limit: int):
         change_db_id_to_str(jsonable_encoder(post)) for post in list_posts[:limit]
     ]
 
+    list_recommendations = list(
+        filter(lambda post: post["summary"] and post["title"], list_recommendations)
+    )
+
     # FIXME: for now, put random media
     for post in list_recommendations:
         post["media"] = (
