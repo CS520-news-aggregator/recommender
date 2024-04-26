@@ -1,3 +1,4 @@
+from datetime import datetime
 from fastapi import APIRouter, HTTPException, Request
 from models.recommendation import Recommendation
 import os
@@ -31,11 +32,12 @@ async def get_recommendations(_: Request, user_id: str, limit: int):
         if len(user_posts) >= limit:
             break
 
-    # FIXME: for now, put random media
+    # FIXME: for now, put random media and date
     for post in user_posts:
         post["media"] = (
             "https://t3.ftcdn.net/jpg/05/82/67/96/360_F_582679641_zCnWSvan9oScBHyWzfirpD4MKGp0kylJ.jpg"
         )
+        post["date"] = get_cur_date()
 
     return {
         "message": "Recommendation sent",
@@ -70,3 +72,7 @@ def change_db_id_to_str(data):
     if data:
         data["id"] = str(data["_id"])
     return data
+
+
+def get_cur_date():
+    return datetime.now().strftime("%Y-%m-%dT%H:%M:%SZ")
