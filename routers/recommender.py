@@ -29,8 +29,8 @@ async def get_recommendations(_: Request, user_id: str, limit: int):
             if post_json := get_db_data("annotator/get-post", {"post_id": post_id}):
                 user_posts.append(post_json["post"])
 
-        if len(user_posts) >= limit:
-            break
+            if len(user_posts) >= limit:
+                break
 
     # FIXME: for now, put random media and date
     for post in user_posts:
