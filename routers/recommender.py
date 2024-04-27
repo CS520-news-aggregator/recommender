@@ -1,3 +1,4 @@
+from typing import List
 from fastapi import APIRouter, BackgroundTasks, HTTPException, Request
 from tqdm import tqdm
 from models.post import Post
@@ -49,7 +50,6 @@ async def get_recommendations(_: Request, user_id: str, limit: int):
     }
 
 
-# recommender/add-recommendations
 @recommender_router.post("/add-recommendations")
 async def add_recommendations(
     _: Request,
@@ -62,7 +62,7 @@ async def add_recommendations(
 
 
 def process_posts(recommendation_query: RecommendationQuery):
-    list_posts = []
+    list_posts: List[Post] = []
 
     for post_id in recommendation_query.post_ids:
         if (
@@ -74,7 +74,7 @@ def process_posts(recommendation_query: RecommendationQuery):
             list_posts.append(Post(**post_json["post"]))
 
     # FIXME: user posts empty for new users upon registration
-    user_recommendations = get_all_user_recommendations(recommendation_query.post_ids)
+    user_recommendations = get_all_user_recommendations(list_posts)
 
     for user_id, user_recomm_posts in tqdm(
         user_recommendations, desc="Adding user recommendations"
