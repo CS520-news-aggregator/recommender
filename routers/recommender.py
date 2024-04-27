@@ -1,8 +1,12 @@
-from datetime import datetime
-from fastapi import APIRouter, HTTPException, Request
+from typing import List
+from fastapi import APIRouter, BackgroundTasks, HTTPException, Request
+from tqdm import tqdm
+from models.post import Post
 from models.recommendation import Recommendation
-import os
-import requests
+from models.utils.funcs import get_data_from_api, add_data_to_api, Response
+from models.utils.constants import DB_HOST
+from models.recommendation import RecommendationQuery, PostRecommendation
+from recommender.preferences import get_all_user_recommendations
 
 recommender_router = APIRouter(prefix="/recommender")
 
@@ -11,10 +15,10 @@ recommender_router = APIRouter(prefix="/recommender")
 async def get_recommendations(_: Request, user_id: str, limit: int):
     print(f"Received request for recommendations for user: {user_id}")
     if (
-        user_recommendations := get_db_data(
-            "recommendation/get-recommendations", {"user_id": user_id}
+        user_recommendations := get_data_from_api(
+            DB_HOST, "recommendation/get-recommendations", {"user_id": user_id}
         )
-    ) is None:
+    ) == Response.FAILURE:
         raise HTTPException(status_code=404, detail="Recommendations not found")
 
     recommendations = [
@@ -26,53 +30,64 @@ async def get_recommendations(_: Request, user_id: str, limit: int):
     for rec in recommendations:
         for post in rec.post_recommendations:
             post_id = post.post_id
-            if post_json := get_db_data("annotator/get-post", {"post_id": post_id}):
+            if post_json := get_data_from_api(
+                DB_HOST, "annotator/get-post", {"post_id": post_id}
+            ):
                 user_posts.append(post_json["post"])
 
             if len(user_posts) >= limit:
                 break
 
-    # FIXME: for now, put random media and date
+    # FIXME: for now, put random media
     for post in user_posts:
         post["media"] = (
             "https://t3.ftcdn.net/jpg/05/82/67/96/360_F_582679641_zCnWSvan9oScBHyWzfirpD4MKGp0kylJ.jpg"
         )
-        post["date"] = get_cur_date()
 
     return {
         "message": "Recommendation sent",
-        "list_recommendations": list(map(change_db_id_to_str, user_posts)),
+        "list_recommendations": user_posts,
     }
 
 
-def get_user_info(user_id: str) -> dict | None:
-    return get_db_data("user/get-user", {"user_id": user_id})
+@recommender_router.post("/add-recommendations")
+async def add_recommendations(
+    _: Request,
+    background_tasks: BackgroundTasks,
+    recommendation_query: RecommendationQuery,
+):
+    print("Received request to add recommendations")
+    background_tasks.add_task(process_posts, recommendation_query)
+    return {"message": "Recommendation process started"}
 
 
-def get_db_data(endpoint: str, params: dict):
-    DB_HOST = os.getenv("DB_HOST", "localhost")
-    db_url = f"http://{DB_HOST}:8000/{endpoint}"
+def process_posts(recommendation_query: RecommendationQuery):
+    list_posts: List[Post] = []
 
-    encountered_error = False
+    for post_id in recommendation_query.post_ids:
+        if (
+            post_json := get_data_from_api(
+                DB_HOST, "annotator/get-post", {"post_id": post_id}
+            )
+            == Response.SUCCESS
+        ):
+            list_posts.append(Post(**post_json["post"]))
 
-    try:
-        response = requests.get(db_url, params=params, timeout=30)
-    except requests.exceptions.RequestException:
-        print(f"Could not get data from database service due to timeout")
-        encountered_error = True
-    else:
-        if response.status_code != 200:
-            print(f"Received status code {response.status_code} from database service")
-            encountered_error = True
+    # FIXME: user posts empty for new users upon registration
+    user_recommendations = get_all_user_recommendations(list_posts)
 
-    return response.json() if not encountered_error else None
+    for user_id, user_recomm_posts in tqdm(
+        user_recommendations, desc="Adding user recommendations"
+    ):
+        post_recommendations = [
+            PostRecommendation(post_id=post.id, date=post.date)
+            for post in user_recomm_posts
+        ]
 
+        user_recommendation = Recommendation(
+            user_id=user_id, post_recommendations=post_recommendations
+        )
 
-def change_db_id_to_str(data):
-    if data:
-        data["id"] = str(data["_id"])
-    return data
-
-
-def get_cur_date():
-    return datetime.now().strftime("%Y-%m-%dT%H:%M:%SZ")
+        add_data_to_api(
+            DB_HOST, "recommendation/add-recommendation", user_recommendation
+        )
