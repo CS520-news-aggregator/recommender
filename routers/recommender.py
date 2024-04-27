@@ -38,11 +38,12 @@ async def get_recommendations(_: Request, user_id: str, limit: int):
             if len(user_posts) >= limit:
                 break
 
-    # FIXME: for now, put random media
+    # FIXME: for now, put doge media if media is not available
     for post in user_posts:
-        post["media"] = (
-            "https://t3.ftcdn.net/jpg/05/82/67/96/360_F_582679641_zCnWSvan9oScBHyWzfirpD4MKGp0kylJ.jpg"
-        )
+        if not post["media"]:
+            post["media"] = (
+                "https://t3.ftcdn.net/jpg/05/82/67/96/360_F_582679641_zCnWSvan9oScBHyWzfirpD4MKGp0kylJ.jpg"
+            )
 
     return {
         "message": "Recommendation sent",

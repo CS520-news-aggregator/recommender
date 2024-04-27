@@ -35,10 +35,6 @@ def get_user_recommendations(list_posts: List[Post], user_id: str) -> List[Post]
         filter(lambda post: post.summary and post.title, recommendations)
     )
 
-    # FIXME: for now, put random media
-    for post in list_recommendations:
-        post.media = "https://t3.ftcdn.net/jpg/05/82/67/96/360_F_582679641_zCnWSvan9oScBHyWzfirpD4MKGp0kylJ.jpg"
-
     return list_recommendations
 
 
