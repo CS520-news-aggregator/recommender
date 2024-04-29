@@ -1,39 +1,23 @@
-from typing import List, Tuple
+from typing import List
 from recommender.spacy import get_spacy_preprocessor
 from models.utils.constants import DB_HOST
 from models.post import Post
+from models.recommendation import PostRecommendation
 import numpy as np
 from models.utils.funcs import get_data_from_api, Response
+from models.utils.constants import LIST_TOPICS
+from tqdm import tqdm
+
+NUM_TOPICS_PER_POST = 3
 
 
-def get_all_user_recommendations(
-    list_posts: List[Post],
-) -> List[Tuple[str, List[Post]]]:
-    print("Received request for all user recommendations")
-    list_user_recommendations = []
+def get_topic_recommendations(list_posts: List[Post]) -> List[PostRecommendation]:
+    recommendations = get_topics_for_post(list_posts)
+    list_recommendations = []
 
-    if (
-        list_users_ids := get_data_from_api(DB_HOST, "user/get-all-users")
-    ) != Response.FAILURE:
-        for user_id in list_users_ids:
-            recommendations = get_user_recommendations(list_posts, user_id)
-            list_user_recommendations.append((user_id, recommendations))
-    else:
-        print("Could not retrieve user data")
-
-    return list_user_recommendations
-
-
-def get_user_recommendations(list_posts: List[Post], user_id: str) -> List[Post]:
-    if (user := get_user_info(user_id)) == Response.FAILURE:
-        print(f"Could not retrieve user data for user: {user_id}")
-        return []
-
-    recommendations = get_top_posts(user["preferences"], list_posts)
-
-    list_recommendations = list(
-        filter(lambda post: post.summary and post.title, recommendations)
-    )
+    for recom_post, post in zip(recommendations, list_posts):
+        if post.summary and post.title:
+            list_recommendations.append(recom_post)
 
     return list_recommendations
 
@@ -56,18 +40,24 @@ def calculate_similarity(topic1, topic2):
     return similarity
 
 
-def get_top_posts(user_interests: List[str], posts: List[Post]) -> List[Post]:
-    # Calculate similarity score for each post
-    similarity_scores = []
-    for post in posts:
-        post_similarity = sum(
-            calculate_similarity(user_interest, post_topic)
-            for user_interest in user_interests
-            for post_topic in post.topics
-        )
-        similarity_scores.append((post, post_similarity))
+def get_topics_for_post(posts: List[Post]) -> List[PostRecommendation]:
+    posts_recommendations: List[PostRecommendation] = []
 
-    # Sort posts based on similarity scores
-    return [
-        post for post, _ in sorted(similarity_scores, key=lambda x: x[1], reverse=True)
-    ]
+    for post in tqdm(posts, desc="Calculating post recommendations"):
+        post_similarity_scores = dict()
+
+        for topic in LIST_TOPICS:
+            post_similarity_scores[topic] = sum(
+                calculate_similarity(topic, post_topic) for post_topic in post.topics
+            )
+
+        sorted_post_scores = sorted(post_similarity_scores.items(), key=lambda x: x[1])
+
+        post_recommendation = PostRecommendation(
+            post_id=post.id,
+            topics=[topic for topic, _ in sorted_post_scores[:NUM_TOPICS_PER_POST]],
+            date=post.date,
+        )
+        posts_recommendations.append(post_recommendation)
+
+    return posts_recommendations

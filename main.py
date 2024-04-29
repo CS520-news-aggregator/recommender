@@ -2,6 +2,7 @@ from fastapi import FastAPI
 import uvicorn
 from fastapi.middleware.cors import CORSMiddleware
 from routers.recommender import recommender_router
+import sys
 
 
 origins = ["*"]
@@ -23,5 +24,22 @@ async def root():
     return {"Hello": "World"}
 
 
+def debug():
+    from routers.recommender import process_posts
+    from models.recommendation import RecommendationQuery
+
+    recommendation_query = RecommendationQuery(
+        post_ids=[
+            "a032af0c-b310-446f-8ac8-e11c0be436d5",
+            "c17d25a9-6317-41fa-b8cf-124043abef56",
+        ]
+    )
+
+    process_posts(recommendation_query)
+
+
 if __name__ == "__main__":
-    uvicorn.run("main:app", host="0.0.0.0", port=8030, reload=True, workers=1)
+    if len(sys.argv) > 1 and sys.argv[1] == "debug":
+        debug()
+    else:
+        uvicorn.run("main:app", host="0.0.0.0", port=8030, reload=True, workers=1)
