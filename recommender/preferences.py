@@ -40,6 +40,7 @@ def calculate_similarity(topic1, topic2):
     return similarity
 
 
+# TODO - Ji
 def get_topics_for_post(posts: List[Post]) -> List[PostRecommendation]:
     posts_recommendations: List[PostRecommendation] = []
 

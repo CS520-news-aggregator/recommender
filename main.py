@@ -1,12 +1,23 @@
+import asyncio
+from contextlib import asynccontextmanager
 from fastapi import FastAPI
 import uvicorn
 from fastapi.middleware.cors import CORSMiddleware
 from routers.recommender import recommender_router
+from recommender.collabfilter import CollabFilteringDaemon
 import sys
+
+RECOMMENDER_DELAY = 60 * 60  # 1 hour
+
+
+@asynccontextmanager
+async def lifespan(_: FastAPI):
+    asyncio.create_task(CollabFilteringDaemon(RECOMMENDER_DELAY).start_daemon())
+    yield
 
 
 origins = ["*"]
-app = FastAPI(title="News Recommender", version="1.0")
+app = FastAPI(title="News Recommender", version="1.0", lifespan=lifespan)
 
 app.add_middleware(
     CORSMiddleware,
