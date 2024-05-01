@@ -13,6 +13,7 @@ COPY requirements.txt .
 RUN pip3 install -r requirements.txt
 
 RUN python3 -m spacy download en_core_web_lg
+RUN pip3 install bing_image_urls
 
 COPY . .
 EXPOSE 8030

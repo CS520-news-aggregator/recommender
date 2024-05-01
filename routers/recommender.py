@@ -8,6 +8,8 @@ from models.utils.constants import DB_HOST
 from models.recommendation import RecommendationQuery, PostRecommendation
 from recommender.preferences import get_topic_recommendations
 from tqdm import tqdm
+from bing_image_urls import bing_image_urls
+
 
 recommender_router = APIRouter(prefix="/recommender")
 
@@ -57,10 +59,10 @@ async def get_recommendations(_: Request, user_id: str, limit: int, page: int):
         if len(user_recom_posts) == limit:
             break
 
-    # # FIXME: for now, put doge media if media is not available
-    # for post in user_recom_posts:
-    #     if not post.media:
-    #         post.media = "https://t3.ftcdn.net/jpg/05/82/67/96/360_F_582679641_zCnWSvan9oScBHyWzfirpD4MKGp0kylJ.jpg"
+    # For now, put bing media if media is not available
+    for post in user_recom_posts:
+        if not post.media:
+            post.media = bing_image_urls(post.title, limit=1)[0]
 
     return {
         "message": "Recommendation sent",
