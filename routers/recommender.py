@@ -10,11 +10,10 @@ from recommender.preferences import get_topic_recommendations
 from tqdm import tqdm
 
 recommender_router = APIRouter(prefix="/recommender")
-POSTS_PULL_LIMIT = 50
 
 
 @recommender_router.get("/get-recommendations")
-async def get_recommendations(_: Request, user_id: str, limit: int):
+async def get_recommendations(_: Request, user_id: str, limit: int, page: int):
     print(f"Received request for recommendations for user: {user_id}")
 
     if (
@@ -23,10 +22,13 @@ async def get_recommendations(_: Request, user_id: str, limit: int):
         raise HTTPException(status_code=404, detail="User not found")
 
     user_prefs = Preferences(preferences=user["preferences"])
+    posts_pull_limit = limit * 2
 
     if (
         recommendations_json := get_data_from_api(
-            DB_HOST, "recommendation/get-recommendations", {"limit": POSTS_PULL_LIMIT}
+            DB_HOST,
+            "recommendation/get-recommendations",
+            {"limit": posts_pull_limit, "page": page},
         )
     ) == Response.FAILURE:
         raise HTTPException(status_code=404, detail="Recommendations not found")
