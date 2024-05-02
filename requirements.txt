@@ -19,3 +19,4 @@ gensim==4.3.2
 tqdm==4.66.2
 nltk==3.8.1
 email_validator==2.1.1
+bing-image-urls==0.1.5
