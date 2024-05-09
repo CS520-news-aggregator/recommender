@@ -7,6 +7,7 @@ import numpy as np
 from models.utils.funcs import get_data_from_api, Response
 from models.utils.constants import LIST_TOPICS
 from tqdm import tqdm
+from models.utils.constants import LAPLACE_CONSTANT
 
 NUM_TOPICS_PER_POST = 3
 
@@ -32,9 +33,8 @@ def calculate_similarity(topic1, topic2):
     topic1_vector = nlp(topic1).vector
     topic2_vector = nlp(topic2).vector
 
-    similarity = (topic1_vector.dot(topic2_vector) + 1) / (
-        np.linalg.norm(topic1_vector) * np.linalg.norm(topic2_vector)
-        + len(topic1_vector)
+    similarity = (topic1_vector.dot(topic2_vector) + LAPLACE_CONSTANT) / (
+        np.linalg.norm(topic1_vector) * np.linalg.norm(topic2_vector) + LAPLACE_CONSTANT * len(topic1_vector)
     )
 
     return similarity
@@ -48,9 +48,7 @@ def get_topics_for_post(posts: List[Post]) -> List[PostRecommendation]:
         post_similarity_scores = dict()
 
         for topic in LIST_TOPICS:
-            post_similarity_scores[topic] = sum(
-                calculate_similarity(topic, post_topic) for post_topic in post.topics
-            )
+            post_similarity_scores[topic] = sum(calculate_similarity(topic, post_topic) for post_topic in post.topics)
 
         sorted_post_scores = sorted(post_similarity_scores.items(), key=lambda x: x[1])
 

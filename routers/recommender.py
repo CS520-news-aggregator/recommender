@@ -18,9 +18,7 @@ recommender_router = APIRouter(prefix="/recommender")
 async def get_recommendations(_: Request, user_id: str, limit: int, page: int):
     print(f"Received request for recommendations for user: {user_id}")
 
-    if (
-        user := get_data_from_api(DB_HOST, "user/get-preferences", {"user_id": user_id})
-    ) == Response.FAILURE:
+    if (user := get_data_from_api(DB_HOST, "user/get-preferences", {"user_id": user_id})) == Response.FAILURE:
         raise HTTPException(status_code=404, detail="User not found")
 
     user_prefs = Preferences(preferences=user["preferences"])
@@ -35,9 +33,7 @@ async def get_recommendations(_: Request, user_id: str, limit: int, page: int):
     ) == Response.FAILURE:
         raise HTTPException(status_code=404, detail="Recommendations not found")
 
-    recommendations = [
-        PostRecommendation(**rec) for rec in recommendations_json["recommendations"]
-    ]
+    recommendations = [PostRecommendation(**rec) for rec in recommendations_json["recommendations"]]
 
     user_topics_dt = dict()
     for rec in recommendations:
@@ -49,11 +45,7 @@ async def get_recommendations(_: Request, user_id: str, limit: int, page: int):
     user_recom_posts: List[Post] = []
 
     for post_id in all_post_ids:
-        if (
-            post_json := get_data_from_api(
-                DB_HOST, "annotator/get-post", {"post_id": post_id}
-            )
-        ) != Response.FAILURE:
+        if (post_json := get_data_from_api(DB_HOST, "annotator/get-post", {"post_id": post_id})) != Response.FAILURE:
             user_recom_posts.append(Post(**post_json["post"]))
 
         if len(user_recom_posts) == limit:
@@ -85,11 +77,7 @@ def process_posts(recommendation_query: RecommendationQuery):
     list_posts: List[Post] = []
 
     for post_id in tqdm(recommendation_query.post_ids, desc="Fetching posts"):
-        if (
-            post_json := get_data_from_api(
-                DB_HOST, "annotator/get-post", {"post_id": post_id}
-            )
-        ) != Response.FAILURE:
+        if (post_json := get_data_from_api(DB_HOST, "annotator/get-post", {"post_id": post_id})) != Response.FAILURE:
             list_posts.append(Post(**post_json["post"]))
 
     posts_recommendations = get_topic_recommendations(list_posts)

@@ -6,7 +6,7 @@ spacy_preprocessor = None
 
 class SpacyPreprocessor:
     def __init__(self) -> None:
-        self.nlp = spacy.load("en_core_web_lg")
+        self.nlp = spacy.load("en_core_web_trf")
 
 
 def get_spacy_preprocessor() -> SpacyPreprocessor:
