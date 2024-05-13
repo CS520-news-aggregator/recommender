@@ -22,7 +22,7 @@ class CollabFilteringDaemon:
     async def start_daemon(self) -> None:
         while True:
             if self.first_run:
-                await asyncio.sleep(10)  # Wait for other services to start
+                await asyncio.sleep(120)  # Wait for other services to start
                 await self._execute_task()
                 self.first_run = False
 
