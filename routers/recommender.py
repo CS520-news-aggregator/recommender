@@ -6,6 +6,8 @@ from models.user import Preferences
 from models.utils.funcs import get_data_from_api, add_data_to_api, Response
 from models.utils.constants import DB_HOST
 from models.recommendation import RecommendationQuery, PostRecommendation
+from models.user_recommendation import UserRecommendation
+from collections import defaultdict
 from recommender.preferences import get_topic_recommendations
 from tqdm import tqdm
 from bing_image_urls import bing_image_urls
@@ -18,7 +20,9 @@ recommender_router = APIRouter(prefix="/recommender")
 async def get_recommendations(_: Request, user_id: str, limit: int, page: int):
     print(f"Received request for recommendations for user: {user_id}")
 
-    if (user := get_data_from_api(DB_HOST, "user/get-preferences", {"user_id": user_id})) == Response.FAILURE:
+    if (
+        user := get_data_from_api(DB_HOST, "user/get-preferences", {"user_id": user_id})
+    ) == Response.FAILURE:
         raise HTTPException(status_code=404, detail="User not found")
 
     user_prefs = Preferences(preferences=user["preferences"])
@@ -33,19 +37,43 @@ async def get_recommendations(_: Request, user_id: str, limit: int, page: int):
     ) == Response.FAILURE:
         raise HTTPException(status_code=404, detail="Recommendations not found")
 
-    recommendations = [PostRecommendation(**rec) for rec in recommendations_json["recommendations"]]
+    if (
+        user_recommendations_json := get_data_from_api(
+            DB_HOST,
+            "user_recommendation/get-recommendations",
+            {"limit": posts_pull_limit, "page": page, "user_id": user_id},
+        )
+    ) == Response.FAILURE:
+        raise HTTPException(status_code=404, detail="User Recommendations not found")
 
-    user_topics_dt = dict()
+    recommendations = [
+        PostRecommendation(**rec) for rec in recommendations_json["recommendations"]
+    ]
+
+    user_recommendations: List[UserRecommendation] = [
+        UserRecommendation(**rec)
+        for rec in user_recommendations_json["recommendations"]
+    ]
+
+    user_dt = defaultdict(float)
     for rec in recommendations:
-        user_topics_dt[rec.post_id] = len(set(user_prefs.preferences) & set(rec.topics))
+        user_dt[rec.post_id] = len(set(user_prefs.preferences) & set(rec.topics))
 
-    sorted_user_posts = sorted(user_topics_dt.items(), key=lambda x: x[1], reverse=True)
+    for recom in user_recommendations:
+        for post_id, post_score in recom.post_scores:
+            user_dt[post_id] += post_score
+
+    sorted_user_posts = sorted(user_dt.items(), key=lambda x: x[1], reverse=True)
     all_post_ids = [post_id for post_id, _ in sorted_user_posts]
 
     user_recom_posts: List[Post] = []
 
     for post_id in all_post_ids:
-        if (post_json := get_data_from_api(DB_HOST, "annotator/get-post", {"post_id": post_id})) != Response.FAILURE:
+        if (
+            post_json := get_data_from_api(
+                DB_HOST, "annotator/get-post", {"post_id": post_id}
+            )
+        ) != Response.FAILURE:
             user_recom_posts.append(Post(**post_json["post"]))
 
         if len(user_recom_posts) == limit:
@@ -77,7 +105,11 @@ def process_posts(recommendation_query: RecommendationQuery):
     list_posts: List[Post] = []
 
     for post_id in tqdm(recommendation_query.post_ids, desc="Fetching posts"):
-        if (post_json := get_data_from_api(DB_HOST, "annotator/get-post", {"post_id": post_id})) != Response.FAILURE:
+        if (
+            post_json := get_data_from_api(
+                DB_HOST, "annotator/get-post", {"post_id": post_id}
+            )
+        ) != Response.FAILURE:
             list_posts.append(Post(**post_json["post"]))
 
     posts_recommendations = get_topic_recommendations(list_posts)

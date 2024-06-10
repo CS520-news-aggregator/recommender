@@ -15,7 +15,7 @@ RUN pip3 install -r requirements.txt
 COPY requirements_test.txt .
 RUN pip3 install -r requirements_test.txt
 
-RUN python3 -m spacy download en_core_web_trf
+RUN pip3 install https://github.com/explosion/spacy-models/releases/download/en_core_web_trf-3.7.3/en_core_web_trf-3.7.3.tar.gz
 
 COPY . .
 EXPOSE 8030
